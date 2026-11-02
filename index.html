@@ -104,6 +104,7 @@ function row(k,x,i){
    x[f[0]]=num?(parseFloat(inp.value)||0):inp.value;
    if(f[0]==='p'){S.pd=today();document.getElementById('pd').value=S.pd}
    save();der.firstChild.innerHTML=derived(k,x);totals()};
+  inp.onchange=function(){if(f[0]==='n'&&applyPrice(x)){document.getElementById('pd').value=S.pd;save();render()}};
   l.appendChild(inp);d.appendChild(l)
  });
  var der=document.createElement('div');der.className='der';
@@ -176,10 +177,12 @@ document.getElementById('snapBtn').onclick=function(){
  S.snaps=S.snaps.filter(function(s){return s.m!==ym});S.snaps.push(c);save();snaps();banner()
 };
 var PRICE_URL='https://raw.githubusercontent.com/a0988650060-lgtm/balance-prices/main/prices.json';  // 填入：https://raw.githubusercontent.com/你的帳號/你的倉庫/main/prices.json
+var PRICES=null;
+function applyPrice(x){var m=(x.n||'').trim().match(/^[0-9A-Za-z]+/);if(m&&PRICES&&PRICES.prices[m[0]]){x.p=PRICES.prices[m[0]];S.pd=PRICES.updated;return true}return false}
 function loadPrices(){
  if(!PRICE_URL)return;
  fetch(PRICE_URL,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
-  var hit=false;
+  PRICES=d;var hit=false;
   ['stocks','etfs'].forEach(function(k){S[k].forEach(function(x){
    var m=(x.n||'').trim().match(/^[0-9A-Za-z]+/);
    if(m&&d.prices[m[0]]){x.p=d.prices[m[0]];hit=true}
