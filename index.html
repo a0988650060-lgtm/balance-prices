@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>資產負債表</title>
+<style>
+:root{--bg:#f6f4ee;--card:#fffdf8;--ink:#1f2a24;--mute:#6b756e;--line:#d9d4c5;--green:#1f5d46;--red:#c0492f;--hero:#1f5d46;--heroink:#fff;--c1:#1f5d46;--c2:#c98a1b;--c3:#3b6ea5;--c4:#8a5a9b;--warn:#fff1cf;--warnink:#6a4a00;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141815;--card:#1d231f;--ink:#e8ece8;--mute:#98a39b;--line:#333c35;--green:#6fcf9f;--red:#ff8d73;--hero:#245f48;--c1:#6fcf9f;--c2:#e0a93f;--c3:#6da6e0;--c4:#c195d1;--warn:#3a2f10;--warnink:#f2d58a}}
+:root[data-theme="dark"]{--bg:#141815;--card:#1d231f;--ink:#e8ece8;--mute:#98a39b;--line:#333c35;--green:#6fcf9f;--red:#ff8d73;--hero:#245f48;--c1:#6fcf9f;--c2:#e0a93f;--c3:#6da6e0;--c4:#c195d1;--warn:#3a2f10;--warnink:#f2d58a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;line-height:1.5}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:8px 0 12px}
+.auth{font-size:13px;color:var(--mute);margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.auth button{padding:5px 10px;border-radius:8px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:600}
+.banner{background:var(--warn);color:var(--warnink);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.hero{background:var(--hero);color:var(--heroink);border-radius:16px;padding:16px;margin-bottom:14px}
+.hero .net{font-size:28px;font-weight:700;margin:2px 0 10px}
+.hero .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px}
+.hero small{opacity:.8;display:block}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;display:flex;justify-content:space-between;gap:8px}
+.card h2 span{color:var(--mute);font-weight:500;font-size:14px}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line);margin:6px 0 8px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--mute)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+.row{border-top:1px dashed var(--line);padding:10px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row label{display:block;font-size:12px;color:var(--mute)}
+.row input,.pd input{width:100%;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 8px}
+.row .full{grid-column:1/-1}
+.der{grid-column:1/-1;font-size:13px;color:var(--mute);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pd{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mute);margin-bottom:14px}
+.pd input{width:auto}
+button{font:inherit;cursor:pointer}
+.del{background:none;border:none;color:var(--red);font-size:13px}
+.add,.snap{width:100%;margin-top:6px;padding:9px;border-radius:10px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:600}
+.snap{background:var(--green);color:var(--bg);margin:0 0 10px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.hist{list-style:none;margin:8px 0 0;padding:0;font-size:14px}
+.hist li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px dashed var(--line)}
+.mute{color:var(--mute);font-size:13px;margin:4px 0}
+.foot{font-size:12px;color:var(--mute);text-align:center;margin:8px 0 24px}
+</style>
+</head>
+<body>
+<main>
+<h1>資產負債表</h1>
+<div class="auth" id="auth"></div>
+<div class="banner" id="banner"></div>
+<div class="hero">
+  <small>淨值（總資產 − 總負債）</small>
+  <div class="net" id="net">NT$ 0</div>
+  <div class="grid">
+    <div><small>總資產</small><b id="ta">NT$ 0</b></div>
+    <div><small>總負債</small><b id="tl">NT$ 0</b></div>
+    <div><small>負債比（負債 ÷ 資產）</small><b id="ratio">—</b></div>
+    <div><small>每月房貸還款</small><b id="mp">NT$ 0</b></div>
+  </div>
+</div>
+<div class="card"><h2>資產配置</h2><div class="bar" id="bar"></div><div class="legend" id="legend"></div></div>
+<div class="pd">股價更新日 <input type="date" id="pd"></div>
+<div id="secs"></div>
+<div class="card">
+  <h2>每月快照</h2>
+  <button class="snap" id="snapBtn">記錄本月快照</button>
+  <div id="trend"></div>
+  <ul class="hist" id="hist"></ul>
+</div>
+<div class="foot">登入後資料會同步到你的 Firebase 帳號；未登入時只存在這台裝置。股價由 GitHub 每個交易日自動更新（開頁面時讀取），也可手動修改。</div>
+</main>
+<script>
+var KEY='balance-sheet-v2';
+function load(){var d={banks:[],stocks:[],etfs:[],property:[],loans:[],snaps:[],pd:''};
+ try{var x=localStorage.getItem(KEY);if(x)return Object.assign(d,JSON.parse(x));var o=localStorage.getItem('balance-sheet-v1');if(o)return Object.assign(d,JSON.parse(o))}catch(e){}return d}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(window.cloudSave)window.cloudSave(S)}
+var S=load();
+var inv=[['n','代號＋名稱（例：0050 元大台灣50）','text',1],['s','股數','number'],['c','成本價（每股）','number'],['p','現價（每股）','number']];
+var cfg={
+ banks:{t:'銀行存款',f:[['n','銀行／帳戶名稱','text',1],['b','存款金額','number',1]],blank:{n:'',b:0}},
+ stocks:{t:'股票',f:inv,blank:{n:'',s:0,c:0,p:0}},
+ etfs:{t:'ETF',f:inv,blank:{n:'',s:0,c:0,p:0}},
+ property:{t:'房產',f:[['n','房產名稱','text',1],['b','目前市值','number',1]],blank:{n:'',b:0}},
+ loans:{t:'房貸',f:[['n','貸款名稱','text',1],['b','剩餘本金','number'],['r','年利率 %','number'],['m','每月還款額','number'],['d','到期年月','month']],blank:{n:'',b:0,r:0,m:0,d:''}}
+};
+function fmt(n){return 'NT$ '+Math.round(n).toLocaleString('zh-TW')}
+function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function val(k,x){return (k==='stocks'||k==='etfs')?x.s*x.p:x.b}
+function sub(k){return S[k].reduce(function(a,x){return a+val(k,x)},0)}
+function derived(k,x){
+ if(k==='stocks'||k==='etfs'){var mv=x.s*x.p,pl=mv-x.s*x.c;return '市值 '+fmt(mv)+'　<span class="'+(pl>=0?'pos':'neg')+'">損益 '+(pl>=0?'+':'')+fmt(pl)+'</span>'}
+ if(k==='loans'){var i=x.b*x.r/100/12;return '每月利息約 '+fmt(i)+'，本金約 '+fmt(Math.max(x.m-i,0))}
+ return ''
+}
+function row(k,x,i){
+ var d=document.createElement('div');d.className='row';
+ cfg[k].f.forEach(function(f){
+  var l=document.createElement('label');if(f[3])l.className='full';
+  l.appendChild(document.createTextNode(f[1]));
+  var inp=document.createElement('input');inp.type=f[2];var num=f[2]==='number';
+  if(num){inp.inputMode='decimal';inp.step='any';inp.value=x[f[0]]||''}else inp.value=x[f[0]]||'';
+  inp.oninput=function(){
+   x[f[0]]=num?(parseFloat(inp.value)||0):inp.value;
+   if(f[0]==='p'){S.pd=today();document.getElementById('pd').value=S.pd}
+   save();der.firstChild.innerHTML=derived(k,x);totals()};
+  l.appendChild(inp);d.appendChild(l)
+ });
+ var der=document.createElement('div');der.className='der';
+ var s=document.createElement('span');s.innerHTML=derived(k,x);der.appendChild(s);
+ var b=document.createElement('button');b.className='del';b.textContent='刪除';
+ b.onclick=function(){S[k].splice(i,1);save();render()};
+ der.appendChild(b);d.appendChild(der);return d
+}
+function render(){
+ var root=document.getElementById('secs');root.innerHTML='';
+ Object.keys(cfg).forEach(function(k){
+  var sec=document.createElement('div');sec.className='card';
+  var h=document.createElement('h2');h.innerHTML=cfg[k].t+'<span id="sub-'+k+'"></span>';sec.appendChild(h);
+  S[k].forEach(function(x,i){sec.appendChild(row(k,x,i))});
+  var a=document.createElement('button');a.className='add';a.textContent='＋ 新增'+cfg[k].t;
+  a.onclick=function(){S[k].push(JSON.parse(JSON.stringify(cfg[k].blank)));save();render()};
+  sec.appendChild(a);root.appendChild(sec)
+ });
+ totals()
+}
+function totals(){
+ var ta=sub('banks')+sub('stocks')+sub('etfs')+sub('property'),tl=sub('loans');
+ var mp=S.loans.reduce(function(a,x){return a+x.m},0);
+ Object.keys(cfg).forEach(function(k){document.getElementById('sub-'+k).textContent='小計 '+fmt(sub(k))});
+ document.getElementById('ta').textContent=fmt(ta);
+ document.getElementById('tl').textContent=fmt(tl);
+ document.getElementById('net').textContent=fmt(ta-tl);
+ document.getElementById('mp').textContent=fmt(mp);
+ document.getElementById('ratio').textContent=ta>0?(tl/ta*100).toFixed(1)+'%':'—';
+ var items=[['存款',sub('banks'),'--c1'],['股票',sub('stocks'),'--c2'],['ETF',sub('etfs'),'--c3'],['房產',sub('property'),'--c4']];
+ var bar=document.getElementById('bar'),lg=document.getElementById('legend');bar.innerHTML='';lg.innerHTML='';
+ items.forEach(function(it){
+  var p=ta>0?it[1]/ta*100:0;
+  var s=document.createElement('div');s.style.cssText='width:'+p+'%;background:var('+it[2]+')';bar.appendChild(s);
+  var l=document.createElement('span');l.innerHTML='<i class="dot" style="background:var('+it[2]+')"></i>'+it[0]+' '+p.toFixed(1)+'%';lg.appendChild(l)
+ });
+ window._cur={ta:ta,tl:tl,net:ta-tl,bank:sub('banks'),stock:sub('stocks'),etf:sub('etfs'),prop:sub('property')}
+}
+function banner(){
+ var n=new Date(),d=new Date(n.getFullYear(),n.getMonth(),n.getDate()),t=new Date(n.getFullYear(),n.getMonth(),10);
+ var ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+ var done=S.snaps.some(function(s){return s.m===ym});
+ if(d>t)t=new Date(n.getFullYear(),n.getMonth()+1,10);
+ var days=Math.round((t-d)/864e5),el=document.getElementById('banner');
+ var due=n.getDate()>=10&&!done;
+ if(due){el.textContent='今天已過 10 日，本月還沒記錄快照。請更新各項金額後按下方「記錄本月快照」。'}
+ else{el.textContent='下次更新日：'+t.getFullYear()+'/'+(t.getMonth()+1)+'/10（'+(days===0?'就是今天':'還有 '+days+' 天')+'）。本月快照：'+(done?'已記錄':'尚未記錄')}
+}
+function snaps(){
+ var s=S.snaps.slice().sort(function(a,b){return a.m<b.m?-1:1}).slice(-12),tr=document.getElementById('trend'),h=document.getElementById('hist');
+ h.innerHTML='';
+ if(s.length<2){tr.innerHTML='<p class="mute">至少記錄兩個月後，這裡會顯示淨值趨勢。</p>'}
+ else{
+  var v=s.map(function(x){return x.net}),mn=Math.min.apply(null,v),mx=Math.max.apply(null,v),r=mx-mn||1,W=320,H=100,P=8;
+  var pts=s.map(function(x,i){return [P+i*(W-2*P)/(s.length-1),H-P-(x.net-mn)/r*(H-2*P)]});
+  tr.innerHTML='<svg viewBox="0 0 320 100" width="100%" role="img" aria-label="淨值趨勢"><polyline fill="none" stroke="var(--green)" stroke-width="2" points="'+pts.map(function(p){return p.join(',')}).join(' ')+'"/>'+pts.map(function(p){return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3" fill="var(--green)"/>'}).join('')+'</svg>'
+ }
+ s.slice().reverse().forEach(function(x,i,arr){
+  var prev=arr[i+1],li=document.createElement('li');
+  var ch=prev?x.net-prev.net:null;
+  li.innerHTML='<span>'+x.m+'</span><span>'+fmt(x.net)+(ch===null?'':' <span class="'+(ch>=0?'pos':'neg')+'">'+(ch>=0?'+':'')+fmt(ch)+'</span>')+'</span>';
+  h.appendChild(li)
+ })
+}
+document.getElementById('pd').value=S.pd||'';
+document.getElementById('pd').oninput=function(){S.pd=this.value;save()};
+document.getElementById('snapBtn').onclick=function(){
+ var n=new Date(),ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+ var c=Object.assign({m:ym},window._cur);
+ S.snaps=S.snaps.filter(function(s){return s.m!==ym});S.snaps.push(c);save();snaps();banner()
+};
+var PRICE_URL='https://raw.githubusercontent.com/a0988650060-lgtm/balance-prices/main/prices.json';  // 填入：https://raw.githubusercontent.com/你的帳號/你的倉庫/main/prices.json
+function loadPrices(){
+ if(!PRICE_URL)return;
+ fetch(PRICE_URL,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+  var hit=false;
+  ['stocks','etfs'].forEach(function(k){S[k].forEach(function(x){
+   var m=(x.n||'').trim().match(/^[0-9A-Za-z]+/);
+   if(m&&d.prices[m[0]]){x.p=d.prices[m[0]];hit=true}
+  })});
+  if(hit){S.pd=d.updated;document.getElementById('pd').value=S.pd;save();render()}
+ }).catch(function(){})
+}
+render();snaps();banner();loadPrices();
+</script>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {getFirestore,doc,getDoc,setDoc} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+// 填入你的 Firebase 專案設定（Firebase 主控台 → 專案設定 → 你的應用程式）
+const firebaseConfig={apiKey:'AIzaSyAdMXfySJepv12l3ZAepDxP-g37R5t8He8',authDomain:'assets-71c12.firebaseapp.com',projectId:'assets-71c12',appId:'1:1017180277341:web:6b1538bca7f3b4b922dbb4'};
+const bar=document.getElementById('auth');
+function btn(t,f){const b=document.createElement('button');b.textContent=t;b.onclick=f;bar.appendChild(b)}
+if(!firebaseConfig.apiKey){bar.textContent='尚未設定 Firebase，資料只存在這台裝置。'}
+else{
+ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+ let ref=null,timer=null;
+ window.cloudSave=function(s){
+  if(!ref)return;clearTimeout(timer);
+  timer=setTimeout(function(){setDoc(ref,{json:JSON.stringify(s),updated:Date.now()}).catch(function(){bar.textContent='雲端同步失敗，資料已先存在這台裝置。'})},800)
+ };
+ onAuthStateChanged(auth,async function(u){
+  bar.textContent='';
+  if(!u){ref=null;bar.append('資料只存在這台裝置。');btn('用 Google 登入同步',function(){signInWithPopup(auth,new GoogleAuthProvider()).catch(function(){})});return}
+  ref=doc(db,'users',u.uid,'data','balance');
+  try{
+   const snap=await getDoc(ref);
+   if(snap.exists()){
+    window.S=Object.assign({banks:[],stocks:[],etfs:[],property:[],loans:[],snaps:[],pd:''},JSON.parse(snap.data().json));
+    render();snaps();banner();loadPrices();
+   }else{await setDoc(ref,{json:JSON.stringify(window.S),updated:Date.now()})}
+   bar.append('已同步：'+u.email+'　');btn('登出',function(){signOut(auth)})
+  }catch(e){ref=null;bar.append('讀取雲端資料失敗，請確認 Firestore 規則已發布。')}
+ })
+}
+</script>
+</body>
+</html>
