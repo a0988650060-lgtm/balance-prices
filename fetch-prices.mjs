@@ -34,6 +34,23 @@ try {
 
 if (Object.keys(prices).length < 500) throw new Error('價格筆數太少，不寫入');
 
+// 收盤價對應的交易日（民國 7 碼或西元 8 碼都能處理）
+function toISO(v) {
+  const d = String(v || '').replace(/\D/g, '');
+  if (d.length === 7) return `${+d.slice(0, 3) + 1911}-${d.slice(3, 5)}-${d.slice(5, 7)}`;
+  if (d.length === 8) return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
+  return null;
+}
+let tradeDate = toISO(twse[0] && twse[0].Date);
+if (!tradeDate) {
+  try {
+    const avg = await get('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL');
+    tradeDate = toISO(avg[0] && avg[0].Date);
+  } catch (e) {
+    console.warn('no trade date:', e.message);
+  }
+}
+
 const updated = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Taipei' });
-writeFileSync('prices.json', JSON.stringify({ updated, prices }));
-console.log('ok', Object.keys(prices).length, updated);
+writeFileSync('prices.json', JSON.stringify({ updated, tradeDate, prices }));
+console.log('ok', Object.keys(prices).length, updated, tradeDate);

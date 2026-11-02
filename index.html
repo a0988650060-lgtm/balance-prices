@@ -60,7 +60,7 @@ button{font:inherit;cursor:pointer}
   </div>
 </div>
 <div class="card"><h2>資產配置</h2><div class="bar" id="bar"></div><div class="legend" id="legend"></div></div>
-<div class="pd">股價更新日 <input type="date" id="pd"></div>
+<div class="pd">股價日期 <input type="date" id="pd"></div>
 <div id="secs"></div>
 <div class="card">
   <h2>每月快照</h2>
@@ -178,7 +178,7 @@ document.getElementById('snapBtn').onclick=function(){
 };
 var PRICE_URL='https://raw.githubusercontent.com/a0988650060-lgtm/balance-prices/main/prices.json';  // 填入：https://raw.githubusercontent.com/你的帳號/你的倉庫/main/prices.json
 var PRICES=null;
-function applyPrice(x){var m=(x.n||'').trim().match(/^[0-9A-Za-z]+/);if(m&&PRICES&&PRICES.prices[m[0]]){x.p=PRICES.prices[m[0]];S.pd=PRICES.updated;return true}return false}
+function applyPrice(x){var m=(x.n||'').trim().match(/^[0-9A-Za-z]+/);if(m&&PRICES&&PRICES.prices[m[0]]){x.p=PRICES.prices[m[0]];S.pd=PRICES.tradeDate||PRICES.updated;return true}return false}
 function loadPrices(){
  if(!PRICE_URL)return;
  fetch(PRICE_URL,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
@@ -187,7 +187,7 @@ function loadPrices(){
    var m=(x.n||'').trim().match(/^[0-9A-Za-z]+/);
    if(m&&d.prices[m[0]]){x.p=d.prices[m[0]];hit=true}
   })});
-  if(hit){S.pd=d.updated;document.getElementById('pd').value=S.pd;save();render()}
+  if(hit){S.pd=d.tradeDate||d.updated;document.getElementById('pd').value=S.pd;save();render()}
  }).catch(function(){})
 }
 render();snaps();banner();loadPrices();
