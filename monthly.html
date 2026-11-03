@@ -9,6 +9,9 @@
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101311;--card:#181d1a;--ink:#e8ece8;--mute:#98a39b;--line:#2e3631;--acc:#6bcf9f;--accink:#0d2018;--red:#ff8d73;--inp:#121714}}
 :root[data-theme="dark"]{--bg:#101311;--card:#181d1a;--ink:#e8ece8;--mute:#98a39b;--line:#2e3631;--acc:#6bcf9f;--accink:#0d2018;--red:#ff8d73;--inp:#121714}
+:root{--up:#d6453d;--dn:#1e8a54}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--up:#ff6b61;--dn:#4cd08a}}:root[data-theme="dark"]{--up:#ff6b61;--dn:#4cd08a}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.tr{padding:10px 0;border-top:1px dashed var(--line)}.tr:first-child{border-top:0}.trh{display:flex;justify-content:space-between;gap:8px}.trc{font-size:13px;color:var(--mute);margin:2px 0 4px}.trm{display:flex;justify-content:space-between;font-size:11px;color:var(--mute)}.trx{font-size:13px;margin-top:6px;color:var(--mute)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;line-height:1.5}
@@ -58,6 +61,7 @@ label.chk{margin-top:6px;font-size:13px}
 </div>
 <button class="copy" id="copyBtn" hidden>帶入上月項目</button>
 <div id="secs"></div>
+<div class="card"><h2>趨勢分析</h2><div id="trends"></div></div>
 <div class="card"><h2>歷史紀錄</h2><div class="mute" id="year"></div><ul class="hist" id="hist"></ul></div>
 <datalist id="banks"></datalist>
 <div class="foot"><div class="auth" id="auth"></div></div>
@@ -133,7 +137,7 @@ function refresh(){
  var h=$('hist');h.innerHTML='';
  Object.keys(S.months).sort().reverse().slice(0,12).forEach(function(k){
   var x=tot(mk(k)),li=el('li','','<div><b>'+k+'</b><span>結餘 '+fmt(x.sal+x.div-x.card)+'</span></div><small>薪資 '+fmt(x.sal)+'｜股息 '+fmt(x.div)+'｜卡費 '+fmt(x.card)+'</small>');
-  li.onclick=function(){cur=k;render();window.scrollTo(0,0)};h.appendChild(li)})}
+  li.onclick=function(){cur=k;render();window.scrollTo(0,0)};h.appendChild(li)});trends()}
 function shift(d){var n=new Date(+cur.slice(0,4),+cur.slice(5,7)-1+d,1);cur=ymOf(n);render()}
 $('prev').onclick=function(){shift(-1)};$('next').onclick=function(){shift(1)};
 $('mon').onchange=function(){if(this.value){cur=this.value;render()}};
@@ -152,6 +156,39 @@ function loadPrices(){
   Object.keys(S.months).forEach(function(k){mk(k).divs.forEach(function(x){var n=d.names[(x.k||'').toUpperCase()];if(n)x.n=n})});
   save();render()
  }).catch(function(){priceErr=true})}
+var BAL=(function(){try{return JSON.parse(localStorage.getItem('balance-sheet-v2')||'{}')}catch(e){return{}}})();
+function chg(a,b,f){
+ if(b===undefined)return '<span class="mute">首筆紀錄</span>';
+ var d=a-b;if(!d)return '<span class="mute">與上月持平</span>';
+ var p=b?d/Math.abs(b)*100:null;
+ return '<span class="'+(d>0?'up':'dn')+'">'+(d>0?'▲ +':'▼ ')+f(d)+(p===null?'':'（'+(d>0?'+':'')+p.toFixed(1)+'%）')+'</span>'}
+function trendCard(title,pts,f,extra){
+ var d=el('div','tr'),n=pts.length;
+ if(!n){d.innerHTML='<div class="trh"><b>'+title+'</b></div><div class="mute">尚無資料</div>'+(extra||'');return d}
+ var last=pts[n-1],prev=n>1?pts[n-2].v:undefined,mx=Math.max.apply(null,pts.map(function(p){return p.v}))||1,bw=312/n;
+ var bars=pts.map(function(p,i){var h=Math.max(2,p.v/mx*64);return '<rect x="'+(4+i*bw+bw*.15)+'" y="'+(70-h)+'" width="'+bw*.7+'" height="'+h+'" rx="2" fill="var(--acc)" opacity="'+(i===n-1?1:.45)+'"/>'}).join('');
+ d.innerHTML='<div class="trh"><b>'+title+'</b><span>'+f(last.v)+'</span></div><div class="trc">'+last.m+' 較上月：'+chg(last.v,prev,f)+'</div><svg viewBox="0 0 320 70" width="100%" role="img" aria-label="'+title+'趨勢">'+bars+'</svg><div class="trm"><span>'+pts[0].m+'</span><span>'+last.m+'</span></div>'+(extra||'');
+ return d}
+function trends(){
+ var root=$('trends');if(!root)return;root.innerHTML='';
+ var T=Object.keys(S.months).sort().slice(-12).map(function(k){var t=tot(mk(k));return{m:k,sal:t.sal,card:t.card,div:t.div,inc:t.sal+t.div}});
+ function pick(k){return T.map(function(t){return{m:t.m,v:t[k]}})}
+ root.appendChild(trendCard('收入（薪資＋股息）',pick('inc'),fmt));
+ root.appendChild(trendCard('薪資',pick('sal'),fmt));
+ root.appendChild(trendCard('ETF 股息收入',pick('div'),fmt));
+ root.appendChild(trendCard('信用卡費',pick('card'),fmt));
+ var bs=(BAL.snaps||[]).filter(function(s){return s.h}).sort(function(a,b){return a.m<b.m?-1:1}).slice(-12);
+ var pts=bs.map(function(s){var v=0;Object.keys(s.h).forEach(function(c){if(c.indexOf('00')===0)v+=s.h[c]});return{m:s.m,v:v}});
+ var ex='';
+ if(!bs.length)ex='<div class="trx">在資產負債表按「記錄本月快照」後，這裡會顯示 ETF 持有股數的變化。</div>';
+ else if(bs.length>1){
+  var a=bs[bs.length-1].h,b=bs[bs.length-2].h,L=[];
+  Object.keys(Object.assign({},a,b)).forEach(function(c){
+   if(c.indexOf('00')!==0)return;var d=(a[c]||0)-(b[c]||0);
+   if(d)L.push('<span class="'+(d>0?'up':'dn')+'">'+c+((PRICES&&PRICES.names[c])?' '+PRICES.names[c]:'')+' '+(d>0?'+':'')+d.toLocaleString('en-US')+' 股</span>')});
+  ex='<div class="trx">'+(L.length?L.join('　'):'本月 ETF 持股沒有增減')+'</div>'}
+ root.appendChild(trendCard('ETF 持有股數',pts,function(x){return Math.round(x).toLocaleString('en-US')+' 股'},ex));
+}
 banks();render();loadPrices();
 </script>
 <script type="module">
@@ -174,6 +211,7 @@ onAuthStateChanged(auth,async function(u){
   const snap=await getDoc(ref);
   if(snap.exists()){window.S=norm(JSON.parse(snap.data().json));render()}
   else{await setDoc(ref,{json:JSON.stringify(window.S),updated:Date.now()})}
+  const bs=await getDoc(doc(db,'users',u.uid,'data','balance'));if(bs.exists()){window.BAL=JSON.parse(bs.data().json);trends()}
   bar.append('已同步：'+u.email+'　');btn('登出',function(){signOut(auth)})
  }catch(e){ref=null;bar.append('讀取雲端資料失敗，請確認 Firestore 規則已發布。')}
 });

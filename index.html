@@ -9,6 +9,9 @@
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101311;--card:#181d1a;--ink:#e8ece8;--mute:#98a39b;--line:#2e3631;--acc:#6bcf9f;--accink:#0d2018;--red:#ff8d73;--inp:#121714;--c1:#6bcf9f;--c2:#e0a93f;--c3:#c195d1}}
 :root[data-theme="dark"]{--bg:#101311;--card:#181d1a;--ink:#e8ece8;--mute:#98a39b;--line:#2e3631;--acc:#6bcf9f;--accink:#0d2018;--red:#ff8d73;--inp:#121714;--c1:#6bcf9f;--c2:#e0a93f;--c3:#c195d1}
+:root{--up:#d6453d;--dn:#1e8a54}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--up:#ff6b61;--dn:#4cd08a}}:root[data-theme="dark"]{--up:#ff6b61;--dn:#4cd08a}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.tpl{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0 8px;font-size:15px}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;line-height:1.5}
@@ -101,7 +104,7 @@ var blank={banks:{n:'',b:0},stocks:{k:'',n:'',s:0,c:0,p:0},property:{n:'',b:0},l
 function val(k,x){return k==='stocks'?x.s*x.p:x.b}
 function sub(k){return S[k].reduce(function(a,x){return a+val(k,x)},0)}
 function derived(k,x){
- if(k==='stocks'){var mv=x.s*x.p,pl=mv-x.s*x.c;return '市值 '+fmt(mv)+'　<span class="'+(pl>=0?'pos':'neg')+'">損益 '+(pl>=0?'+':'')+fmt(pl)+'</span>'}
+ if(k==='stocks'){var mv=x.s*x.p,pl=mv-x.s*x.c;return '市值 '+fmt(mv)+'　<span class="'+(pl>=0?'up':'dn')+'">損益 '+(pl>=0?'+':'')+fmt(pl)+'</span>'}
  var i=x.b*x.r/100/12;return '每月利息約 '+fmt(i)+'，本金約 '+fmt(Math.max(x.m-i,0))}
 function txtIn(x,key,ph){var i=el('input');i.type='text';i.placeholder=ph||'';i.value=x[key]||'';i.oninput=function(){x[key]=i.value;save()};return i}
 function numIn(x,key,ph,cb){
@@ -144,6 +147,7 @@ function render(){
  cfg.forEach(function(c){
   var k=c[0],sec=el('div','card');sec.id='sec-'+k;
   sec.appendChild(el('h2','',c[2]+'<span id="sub-'+k+'"></span>'));
+  if(k==='stocks')sec.appendChild(el('div','tpl','<span>總損益</span><b id="stpl"></b>'));
   if((k==='banks'||k==='property')&&S[k].length)sec.appendChild(el('div','row two head','<span>'+(k==='banks'?'銀行／帳戶名稱':'房產名稱')+'</span><span>'+(k==='banks'?'存款金額':'目前市值')+'</span><span></span>'));
   if(!S[k].length)sec.appendChild(el('div','empty','目前無項目，請點擊右上角新增'));
   S[k].forEach(function(x,i){sec.appendChild(row(k,x,i))});
@@ -157,6 +161,10 @@ function totals(){
  [['存款',b,'--c1'],['股票',st,'--c2'],['房產',pr,'--c3']].forEach(function(it){
   var p=ta>0?it[1]/ta*100:0,s=el('div');s.style.cssText='width:'+p+'%;background:var('+it[2]+')';bar.appendChild(s);
   lg.appendChild(el('span','','<i class="dot" style="background:var('+it[2]+')"></i>'+it[0]+' '+p.toFixed(1)+'%'))});
+ var sp=$('stpl');
+ if(sp){var cost=S.stocks.reduce(function(a,x){return a+x.s*x.c},0),pl=st-cost;
+  sp.parentNode.style.display=S.stocks.length?'':'none';sp.className=pl>=0?'up':'dn';
+  sp.textContent=(pl>=0?'+':'')+fmt(pl)+(cost>0?'（'+(pl>=0?'+':'')+(pl/cost*100).toFixed(2)+'%）':'')}
  window._cur={ta:ta,tl:tl,net:ta-tl,bank:b,stock:st,prop:pr}}
 function addItem(k){
  S[k].push(JSON.parse(JSON.stringify(blank[k])));save();render();
@@ -177,7 +185,7 @@ function snaps(){
   tr.innerHTML='<svg viewBox="0 0 320 100" width="100%" role="img" aria-label="淨值趨勢"><polyline fill="none" stroke="var(--acc)" stroke-width="2" points="'+pts.map(function(p){return p.join(',')}).join(' ')+'"/>'+pts.map(function(p){return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3" fill="var(--acc)"/>'}).join('')+'</svg>'}
  s.slice().reverse().forEach(function(x,i,arr){
   var pv=arr[i+1],ch=pv?x.net-pv.net:null;
-  h.appendChild(el('li','','<span>'+x.m+'</span><span>'+fmt(x.net)+(ch===null?'':' <span class="'+(ch>=0?'pos':'neg')+'">'+(ch>=0?'+':'')+fmt(ch)+'</span>')+'</span>'))})}
+  h.appendChild(el('li','','<span>'+x.m+'</span><span>'+fmt(x.net)+(ch===null?'':' <span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'+':'')+fmt(ch)+'</span>')+'</span>'))})}
 function loadPrices(){
  if(!PRICE_URL)return;
  fetch(PRICE_URL,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
@@ -193,7 +201,8 @@ document.addEventListener('click',function(e){if(!e.target.closest('.addwrap'))m
 $('pd').value=S.pd||'';$('pd').oninput=function(){S.pd=this.value;save()};
 $('snapBtn').onclick=function(){
  var n=new Date(),ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
- S.snaps=S.snaps.filter(function(s){return s.m!==ym});S.snaps.push(Object.assign({m:ym},window._cur));save();snaps();banner()};
+ S.snaps=S.snaps.filter(function(s){return s.m!==ym});var h={};S.stocks.forEach(function(x){var c=(x.k||'').trim().toUpperCase();if(c&&x.s)h[c]=(h[c]||0)+x.s});
+ S.snaps.push(Object.assign({m:ym},window._cur,{h:h}));save();snaps();banner()};
 render();snaps();banner();loadPrices();
 </script>
 <script type="module">
