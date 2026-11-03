@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>每月收支紀錄</title>
+<style>
+:root{--bg:#f6f4ee;--card:#fffdf8;--ink:#1f2a24;--mute:#6b756e;--line:#d9d4c5;--acc:#1f5d46;--accink:#fff;--red:#c0492f;--inp:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101311;--card:#181d1a;--ink:#e8ece8;--mute:#98a39b;--line:#2e3631;--acc:#6bcf9f;--accink:#0d2018;--red:#ff8d73;--inp:#121714}}
+:root[data-theme="dark"]{--bg:#101311;--card:#181d1a;--ink:#e8ece8;--mute:#98a39b;--line:#2e3631;--acc:#6bcf9f;--accink:#0d2018;--red:#ff8d73;--inp:#121714}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;line-height:1.5}
+main{max-width:640px;margin:0 auto;padding:16px}
+input{font:inherit;color:var(--ink);background:var(--inp);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;min-width:0}
+input[type=checkbox]{width:auto}
+button{font:inherit;cursor:pointer}
+small{display:block;color:var(--mute);font-size:12px}
+a.back{display:block;font-size:14px;font-weight:600;color:var(--acc);text-decoration:none;margin-bottom:8px}
+.mn{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.mn button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:8px 14px}
+.mn input{flex:1;text-align:center;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.card h2{font-size:17px;margin:0 0 6px;display:flex;justify-content:space-between;gap:8px}
+.card h2 span{color:var(--mute);font-weight:500;font-size:13px}
+.bal{font-size:28px;font-weight:700;margin:2px 0 10px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.row{border-top:1px dashed var(--line);padding:10px 0}
+.two{display:grid;grid-template-columns:1fr 1fr 34px;gap:8px;align-items:center}
+.row.head{border-top:0;padding:0 0 2px;font-size:12px;color:var(--mute)}
+.st-top{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.code{width:130px;flex:none}
+.nm{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nm.bad{color:var(--red);font-weight:400;font-size:13px}
+label{display:block;font-size:12px;color:var(--mute)}
+label.chk{margin-top:6px;font-size:13px}
+.del{background:none;border:0;font-size:18px;color:var(--red);padding:4px}
+.empty{text-align:center;color:var(--mute);padding:10px 0 2px;font-size:14px}
+.add{width:100%;margin-top:6px;padding:9px;border-radius:10px;border:1.5px solid var(--acc);background:transparent;color:var(--acc);font-weight:600}
+.copy{width:100%;margin-bottom:12px;padding:10px;border-radius:12px;border:0;background:var(--acc);color:var(--accink);font-weight:700}
+.hist{list-style:none;margin:8px 0 0;padding:0}
+.hist li{padding:8px 0;border-top:1px dashed var(--line);cursor:pointer}
+.hist li div{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.hist li small{margin-top:2px}
+.mute{color:var(--mute);font-size:13px;margin:4px 0}
+.foot{font-size:12px;color:var(--mute);text-align:center;margin:8px 0 24px}
+.auth{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+.auth button{padding:5px 10px;border-radius:8px;border:1.5px solid var(--acc);background:transparent;color:var(--acc);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="./">← 資產負債表</a>
+<div class="mn"><button id="prev">◀</button><input type="month" id="mon"><button id="next">▶</button></div>
+<div class="card">
+  <small>本月結餘（薪資 + 股息 − 信用卡費）</small><div class="bal" id="bal">NT$ 0</div>
+  <div class="three"><div><small>薪資</small><b id="s1">NT$ 0</b></div><div><small>股息</small><b id="s2">NT$ 0</b></div><div><small>信用卡費</small><b id="s3">NT$ 0</b></div></div>
+</div>
+<button class="copy" id="copyBtn" hidden>帶入上月項目</button>
+<div id="secs"></div>
+<div class="card"><h2>歷史紀錄</h2><div class="mute" id="year"></div><ul class="hist" id="hist"></ul></div>
+<datalist id="banks"></datalist>
+<div class="foot"><div class="auth" id="auth"></div></div>
+</main>
+<script>
+var PRICE_URL='https://raw.githubusercontent.com/a0988650060-lgtm/balance-prices/main/prices.json';
+var KEY='monthly-v1',PRICES=null,priceErr=false;
+function $(i){return document.getElementById(i)}
+function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e}
+function fmt(n){return 'NT$ '+Math.round(n).toLocaleString('zh-TW')}
+function nf(v){return v?Number(v).toLocaleString('en-US',{maximumFractionDigits:6}):''}
+function norm(o){o=o||{};return{months:(o.months&&typeof o.months==='object')?o.months:{}}}
+function save(){
+ Object.keys(S.months).forEach(function(k){var m=S.months[k];if(!m.salary.length&&!m.cards.length&&!m.divs.length)delete S.months[k]});
+ try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(window.cloudSave)window.cloudSave(S)}
+function load(){try{var x=localStorage.getItem(KEY);if(x)return norm(JSON.parse(x))}catch(e){}return norm()}
+var S=load();
+function ymOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+var cur=ymOf(new Date());
+function mk(k){var m=S.months[k]||(S.months[k]={});m.salary=m.salary||[];m.cards=m.cards||[];m.divs=m.divs||[];return m}
+function sum(a,f){return a.reduce(function(s,x){return s+(x[f]||0)},0)}
+function tot(m){return{sal:sum(m.salary,'a'),card:sum(m.cards,'a'),div:sum(m.divs,'a'),unpaid:m.cards.reduce(function(s,x){return s+(x.paid?0:(x.a||0))},0)}}
+function txtIn(x,key,ph){var i=el('input');i.type='text';i.placeholder=ph||'';i.value=x[key]||'';i.oninput=function(){x[key]=i.value;save()};return i}
+function numIn(x,key,ph){
+ var i=el('input');i.type='text';i.inputMode='decimal';i.placeholder=ph||'';i.value=nf(x[key]);
+ i.onfocus=function(){i.value=x[key]||''};i.onblur=function(){i.value=nf(x[key])};
+ i.oninput=function(){x[key]=parseFloat(i.value.replace(/,/g,''))||0;save();refresh()};return i}
+function fld(t,i){var l=el('label','',t);l.appendChild(i);return l}
+function trash(k,i){var b=el('button','del','🗑️');b.setAttribute('aria-label','刪除');b.onclick=function(){mk(cur)[k].splice(i,1);save();render()};return b}
+function look(x,nm){
+ var c=(x.k||'').toUpperCase();nm.className='nm';
+ if(c.length<4){nm.textContent='';return}
+ if(!PRICES){nm.textContent=priceErr?'無法取得名稱，可手動略過':'名稱載入中…';return}
+ var n=PRICES.names[c];if(n){x.n=n;nm.textContent=n}else{x.n='';nm.textContent='查無此代碼';nm.className='nm bad'}}
+var cfg=[['salary','💰','薪資'],['cards','💳','信用卡費'],['divs','📈','ETF 股息']];
+var blank={salary:{n:'',a:0},cards:{n:'',a:0,paid:false},divs:{k:'',n:'',a:0}};
+function row(k,x,i){
+ var r=el('div','row'),g;
+ if(k==='divs'){
+  var top=el('div','st-top'),nm=el('span','nm',''),code=el('input','code');nm.textContent=x.n||'';
+  code.type='text';code.placeholder='代碼，例：0056';code.value=x.k||'';
+  code.oninput=function(){x.k=code.value.trim();look(x,nm);save()};
+  top.appendChild(code);top.appendChild(nm);top.appendChild(trash(k,i));
+  r.appendChild(top);r.appendChild(fld('股息金額（實領）',numIn(x,'a','0')));return r}
+ g=el('div','two');
+ var n=txtIn(x,'n',k==='cards'?'例：台北富邦':'例：本薪、獎金');if(k==='cards')n.setAttribute('list','banks');
+ g.appendChild(n);g.appendChild(numIn(x,'a','0'));g.appendChild(trash(k,i));r.appendChild(g);
+ if(k==='cards'){var l=el('label','chk'),c=el('input');c.type='checkbox';c.checked=!!x.paid;
+  c.onchange=function(){x.paid=c.checked;save();refresh()};l.appendChild(c);l.appendChild(document.createTextNode(' 已繳'));r.appendChild(l)}
+ return r}
+function render(){
+ var m=mk(cur),root=$('secs');root.innerHTML='';$('mon').value=cur;
+ cfg.forEach(function(c){
+  var k=c[0],sec=el('div','card');
+  sec.appendChild(el('h2','',c[1]+' '+c[2]+'<span id="sub-'+k+'"></span>'));
+  if(k!=='divs'&&m[k].length)sec.appendChild(el('div','row two head','<span>'+(k==='cards'?'銀行':'項目')+'</span><span>金額</span><span></span>'));
+  if(!m[k].length)sec.appendChild(el('div','empty','本月尚無紀錄'));
+  m[k].forEach(function(x,i){sec.appendChild(row(k,x,i))});
+  var a=el('button','add','＋ 新增'+c[2]);a.onclick=function(){m[k].push(JSON.parse(JSON.stringify(blank[k])));save();render();
+   var rs=sec.querySelectorAll('.row:not(.head)'),r=rs[rs.length-1];if(r){var i=r.querySelector('input');if(i)i.focus()}};
+  sec.appendChild(a);root.appendChild(sec)});
+ var p=new Date(+cur.slice(0,4),+cur.slice(5,7)-2,1),pm=S.months[ymOf(p)];
+ $('copyBtn').hidden=!(pm&&!m.salary.length&&!m.cards.length&&!m.divs.length);
+ refresh()}
+function refresh(){
+ var m=mk(cur),t=tot(m);
+ $('bal').textContent=fmt(t.sal+t.div-t.card);$('s1').textContent=fmt(t.sal);$('s2').textContent=fmt(t.div);$('s3').textContent=fmt(t.card);
+ $('sub-salary').textContent='小計 '+fmt(t.sal);$('sub-divs').textContent='小計 '+fmt(t.div);
+ $('sub-cards').textContent='小計 '+fmt(t.card)+(t.unpaid>0?'（未繳 '+fmt(t.unpaid)+'）':'');
+ var yr=cur.slice(0,4),ys={sal:0,card:0,div:0};
+ Object.keys(S.months).forEach(function(k){if(k.indexOf(yr)===0){var x=tot(mk(k));ys.sal+=x.sal;ys.card+=x.card;ys.div+=x.div}});
+ $('year').textContent=yr+' 年累計：薪資 '+fmt(ys.sal)+'｜股息 '+fmt(ys.div)+'｜卡費 '+fmt(ys.card);
+ var h=$('hist');h.innerHTML='';
+ Object.keys(S.months).sort().reverse().slice(0,12).forEach(function(k){
+  var x=tot(mk(k)),li=el('li','','<div><b>'+k+'</b><span>結餘 '+fmt(x.sal+x.div-x.card)+'</span></div><small>薪資 '+fmt(x.sal)+'｜股息 '+fmt(x.div)+'｜卡費 '+fmt(x.card)+'</small>');
+  li.onclick=function(){cur=k;render();window.scrollTo(0,0)};h.appendChild(li)})}
+function shift(d){var n=new Date(+cur.slice(0,4),+cur.slice(5,7)-1+d,1);cur=ymOf(n);render()}
+$('prev').onclick=function(){shift(-1)};$('next').onclick=function(){shift(1)};
+$('mon').onchange=function(){if(this.value){cur=this.value;render()}};
+$('copyBtn').onclick=function(){
+ var pm=S.months[ymOf(new Date(+cur.slice(0,4),+cur.slice(5,7)-2,1))],m=mk(cur);
+ m.salary=(pm.salary||[]).map(function(x){return{n:x.n,a:x.a}});
+ m.cards=(pm.cards||[]).map(function(x){return{n:x.n,a:0,paid:false}});
+ m.divs=(pm.divs||[]).map(function(x){return{k:x.k,n:x.n,a:0}});
+ save();render()};
+function banks(){
+ try{var b=JSON.parse(localStorage.getItem('balance-sheet-v2')||'{}').banks||[],dl=$('banks');
+  b.forEach(function(x){if(x.n){var o=document.createElement('option');o.value=x.n;dl.appendChild(o)}})}catch(e){}}
+function loadPrices(){
+ fetch(PRICE_URL,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+  d.names=d.names||{};PRICES=d;
+  Object.keys(S.months).forEach(function(k){mk(k).divs.forEach(function(x){var n=d.names[(x.k||'').toUpperCase()];if(n)x.n=n})});
+  save();render()
+ }).catch(function(){priceErr=true})}
+banks();render();loadPrices();
+</script>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {getFirestore,doc,getDoc,setDoc} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+const firebaseConfig={apiKey:'AIzaSyAdMXfySJepv12l3ZAepDxP-g37R5t8He8',authDomain:'assets-71c12.firebaseapp.com',projectId:'assets-71c12',appId:'1:1017180277341:web:6b1538bca7f3b4b922dbb4'};
+const bar=document.getElementById('auth');
+function btn(t,f){const b=document.createElement('button');b.textContent=t;b.onclick=f;bar.appendChild(b)}
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+let ref=null,timer=null;
+window.cloudSave=function(s){
+ if(!ref)return;clearTimeout(timer);
+ timer=setTimeout(function(){setDoc(ref,{json:JSON.stringify(s),updated:Date.now()}).catch(function(){bar.textContent='雲端同步失敗，資料已先存在這台裝置。'})},800)};
+onAuthStateChanged(auth,async function(u){
+ bar.textContent='';
+ if(!u){ref=null;bar.append('資料只存在這台裝置。');btn('用 Google 登入同步',function(){signInWithPopup(auth,new GoogleAuthProvider()).catch(function(){})});return}
+ ref=doc(db,'users',u.uid,'data','monthly');
+ try{
+  const snap=await getDoc(ref);
+  if(snap.exists()){window.S=norm(JSON.parse(snap.data().json));render()}
+  else{await setDoc(ref,{json:JSON.stringify(window.S),updated:Date.now()})}
+  bar.append('已同步：'+u.email+'　');btn('登出',function(){signOut(auth)})
+ }catch(e){ref=null;bar.append('讀取雲端資料失敗，請確認 Firestore 規則已發布。')}
+});
+</script>
+</body>
+</html>
