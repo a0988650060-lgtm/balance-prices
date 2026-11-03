@@ -12,12 +12,13 @@ const num = (v) => {
 };
 
 const prices = {};
+const names = {};
 
 // 上市（含大部分 ETF）
 const twse = await get('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
 for (const x of twse) {
   const p = num(x.ClosingPrice);
-  if (p) prices[String(x.Code).trim()] = p;
+  if (p) { const c = String(x.Code).trim(); prices[c] = p; names[c] = String(x.Name || '').trim(); }
 }
 
 // 上櫃（抓不到就略過，不影響上市資料）
@@ -26,7 +27,7 @@ try {
   for (const x of otc) {
     const code = String(x.SecuritiesCompanyCode || '').trim();
     const p = num(x.Close);
-    if (code && p && !(code in prices)) prices[code] = p;
+    if (code && p && !(code in prices)) { prices[code] = p; names[code] = String(x.CompanyName || x.Name || '').trim(); }
   }
 } catch (e) {
   console.warn('TPEx skipped:', e.message);
@@ -52,5 +53,5 @@ if (!tradeDate) {
 }
 
 const updated = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Taipei' });
-writeFileSync('prices.json', JSON.stringify({ updated, tradeDate, prices }));
+writeFileSync('prices.json', JSON.stringify({ updated, tradeDate, prices, names }));
 console.log('ok', Object.keys(prices).length, updated, tradeDate);
