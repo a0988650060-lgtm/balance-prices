@@ -1,0 +1,22 @@
+name: update-prices
+on:
+  schedule:
+    - cron: '30 10 * * 1-5'  # UTC 10:30 = 台灣時間 18:30，週一到週五
+    - cron: '0 13 * * 1-5'   # UTC 13:00 = 台灣時間 21:00，再補抓一次
+  workflow_dispatch:          # 也可以手動按「Run workflow」
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node fetch-prices.mjs
+      - run: |
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add prices.json
+          git diff --cached --quiet || (git commit -m "update prices" && git push)
