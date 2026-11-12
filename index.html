@@ -82,7 +82,7 @@ label{display:block;font-size:12px;color:var(--mute)}
 <div class="foot"><div class="auth" id="auth"></div></div>
 </main>
 <script>
-var PRICE_URL='https://raw.githubusercontent.com/gaway1228-lgtm/balance-prices/main/prices.json';
+var PRICE_URL='./prices.json';
 var KEY='balance-sheet-v2',PRICES=null,priceErr=false;
 function $(i){return document.getElementById(i)}
 function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e}
@@ -104,7 +104,7 @@ var blank={banks:{n:'',b:0},stocks:{k:'',n:'',s:0,c:0,p:0},property:{n:'',b:0},l
 function val(k,x){return k==='stocks'?x.s*x.p:x.b}
 function sub(k){return S[k].reduce(function(a,x){return a+val(k,x)},0)}
 function derived(k,x){
- if(k==='stocks'){var mv=x.s*x.p,pl=mv-x.s*x.c;return '市值 '+fmt(mv)+'　<span class="'+(pl>=0?'up':'dn')+'">損益 '+(pl>=0?'+':'')+fmt(pl)+'</span>'}
+ if(k==='stocks'){var mv=x.s*x.p,pl=mv-x.s*x.c;return '市值 '+fmt(mv)+' <span class="'+(pl>=0?'up':'dn')+'">損益 '+(pl>=0?'+':'')+fmt(pl)+'</span>'}
  var i=x.b*x.r/100/12;return '每月利息約 '+fmt(i)+'，本金約 '+fmt(Math.max(x.m-i,0))}
 function txtIn(x,key,ph){var i=el('input');i.type='text';i.placeholder=ph||'';i.value=x[key]||'';i.oninput=function(){x[key]=i.value;save()};return i}
 function numIn(x,key,ph,cb){
@@ -118,7 +118,7 @@ function look(x,nm,pEl){
  if(c.length<4){nm.textContent='';return}
  if(!PRICES){nm.textContent=priceErr?'無法取得股價，請手動輸入現價':'股價資料載入中…';return}
  var p=PRICES.prices[c],n=PRICES.names[c];
- if(p||n){x.n=n||x.n||'';nm.textContent=x.n;if(p){x.p=p;pEl.value=nf(p)}S.pd=PRICES.tradeDate||PRICES.updated;$('pd').value=S.pd}
+ if(p||n){x.n=n||x.n||'';nm.textContent=x.n;if(p){x.p=p;pEl.value=nf(p)}S.pd=(PRICES.tradeDate||PRICES.updated||'').slice(0,10);$('pd').value=S.pd}
  else{x.n='';nm.textContent='查無此代碼';nm.className='nm bad'}}
 function row(k,x,i){
  var r,g,upd;
@@ -172,62 +172,4 @@ function addItem(k){
  if(r){r.scrollIntoView({behavior:'smooth',block:'center'});var i=r.querySelector('input');if(i)i.focus()}}
 function banner(){
  var n=new Date(),d=new Date(n.getFullYear(),n.getMonth(),n.getDate()),t=new Date(n.getFullYear(),n.getMonth(),10);
- var ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0'),done=S.snaps.some(function(s){return s.m===ym});
- if(d>t)t=new Date(n.getFullYear(),n.getMonth()+1,10);
- var days=Math.round((t-d)/864e5);
- $('nextup').textContent=(n.getDate()>=10&&!done)?'已過 10 日，本月快照尚未記錄。':'下次更新日：'+(t.getMonth()+1)+'/10（'+(days===0?'就是今天':'還有 '+days+' 天')+'）'+(done?'，本月快照已記錄。':'。')}
-function snaps(){
- var s=S.snaps.slice().sort(function(a,b){return a.m<b.m?-1:1}).slice(-12),tr=$('trend'),h=$('hist');h.innerHTML='';
- if(s.length<2){tr.innerHTML='<p class="mute">至少記錄兩個月後，這裡會顯示淨值趨勢。</p>'}
- else{
-  var v=s.map(function(x){return x.net}),mn=Math.min.apply(null,v),mx=Math.max.apply(null,v),r=mx-mn||1,W=320,H=100,P=8;
-  var pts=s.map(function(x,i){return [P+i*(W-2*P)/(s.length-1),H-P-(x.net-mn)/r*(H-2*P)]});
-  tr.innerHTML='<svg viewBox="0 0 320 100" width="100%" role="img" aria-label="淨值趨勢"><polyline fill="none" stroke="var(--acc)" stroke-width="2" points="'+pts.map(function(p){return p.join(',')}).join(' ')+'"/>'+pts.map(function(p){return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3" fill="var(--acc)"/>'}).join('')+'</svg>'}
- s.slice().reverse().forEach(function(x,i,arr){
-  var pv=arr[i+1],ch=pv?x.net-pv.net:null;
-  h.appendChild(el('li','','<span>'+x.m+'</span><span>'+fmt(x.net)+(ch===null?'':' <span class="'+(ch>=0?'up':'dn')+'">'+(ch>=0?'+':'')+fmt(ch)+'</span>')+'</span>'))})}
-function loadPrices(){
- if(!PRICE_URL)return;
- fetch(PRICE_URL,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
-  d.names=d.names||{};PRICES=d;var hit=false;
-  S.stocks.forEach(function(x){var c=(x.k||'').trim().toUpperCase();if(!c)return;if(d.prices[c]){x.p=d.prices[c];hit=true}if(d.names[c])x.n=d.names[c]});
-  if(hit){S.pd=d.tradeDate||d.updated;$('pd').value=S.pd}
-  save();render()
- }).catch(function(){priceErr=true;render()})}
-var menu=$('menu');
-cfg.forEach(function(c){var b=el('button','',c[1]+' '+c[2]);b.onclick=function(){menu.hidden=true;addItem(c[0])};menu.appendChild(b)});
-$('addbtn').onclick=function(e){e.stopPropagation();menu.hidden=!menu.hidden};
-document.addEventListener('click',function(e){if(!e.target.closest('.addwrap'))menu.hidden=true});
-$('pd').value=S.pd||'';$('pd').oninput=function(){S.pd=this.value;save()};
-$('snapBtn').onclick=function(){
- var n=new Date(),ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
- S.snaps=S.snaps.filter(function(s){return s.m!==ym});var h={};S.stocks.forEach(function(x){var c=(x.k||'').trim().toUpperCase();if(c&&x.s)h[c]=(h[c]||0)+x.s});
- S.snaps.push(Object.assign({m:ym},window._cur,{h:h}));save();snaps();banner()};
-render();snaps();banner();loadPrices();
-</script>
-<script type="module">
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import {getAuth,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import {getFirestore,doc,getDoc,setDoc} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-const firebaseConfig={apiKey:'AIzaSyAdMXfySJepv12l3ZAepDxP-g37R5t8He8',authDomain:'assets-71c12.firebaseapp.com',projectId:'assets-71c12',appId:'1:1017180277341:web:6b1538bca7f3b4b922dbb4'};
-const bar=document.getElementById('auth');
-function btn(t,f){const b=document.createElement('button');b.textContent=t;b.onclick=f;bar.appendChild(b)}
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
-let ref=null,timer=null;
-window.cloudSave=function(s){
- if(!ref)return;clearTimeout(timer);
- timer=setTimeout(function(){setDoc(ref,{json:JSON.stringify(s),updated:Date.now()}).catch(function(){bar.textContent='雲端同步失敗，資料已先存在這台裝置。'})},800)};
-onAuthStateChanged(auth,async function(u){
- bar.textContent='';
- if(!u){ref=null;bar.append('資料只存在這台裝置。');btn('用 Google 登入同步',function(){signInWithPopup(auth,new GoogleAuthProvider()).catch(function(){})});return}
- ref=doc(db,'users',u.uid,'data','balance');
- try{
-  const snap=await getDoc(ref);
-  if(snap.exists()){window.S=norm(JSON.parse(snap.data().json));document.getElementById('pd').value=window.S.pd||'';render();snaps();banner();loadPrices()}
-  else{await setDoc(ref,{json:JSON.stringify(window.S),updated:Date.now()})}
-  bar.append('已同步：'+u.email+'　');btn('登出',function(){signOut(auth)})
- }catch(e){ref=null;bar.append('讀取雲端資料失敗，請確認 Firestore 規則已發布。')}
-});
-</script>
-</body>
-</html>
+ var ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0'),
